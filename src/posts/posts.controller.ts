@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Put } from '@nestjs/common';
 import { PostsService } from './posts.service';
 
 @Controller('posts')
@@ -23,14 +15,14 @@ export class PostsController {
     return this.postsService.getPostById(+id);
   }
 
-  @Post()
-  postPost(
-    @Body('authorId') authorId: number,
-    @Body('title') title: string,
-    @Body('content') content: string,
-  ) {
-    return this.postsService.createPost(authorId, title, content);
-  }
+  // @Post()
+  // postPost(
+  //   @Body('authorId') authorId: number,
+  //   @Body('title') title: string,
+  //   @Body('content') content: string,
+  // ) {
+  //   return this.postsService.createPost(authorId, title, content);
+  // }
 
   @Put(':id')
   putPost(
