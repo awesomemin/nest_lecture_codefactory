@@ -39,3 +39,6 @@ postgres-data
 
 # Environment Variables
 .env
+
+# File Upload
+public
