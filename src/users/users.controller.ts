@@ -5,6 +5,11 @@ import { UsersService } from './users.service';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get()
+  getUsers() {
+    return this.usersService.getAllUsers();
+  }
+
   // @Post()
   // postUser(
   //   @Body('nickname') nickname: string,
@@ -13,9 +18,4 @@ export class UsersController {
   // ) {
   //   return this.usersService.createUser({ nickname, email, password });
   // }
-
-  @Get()
-  getUsers() {
-    return this.usersService.getAllUsers();
-  }
 }
