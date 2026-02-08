@@ -47,7 +47,7 @@ export class AuthService {
       return this.jwtService.verify(token, {
         secret: JWT_SECRET,
       });
-    } catch (e) {
+    } catch {
       throw new UnauthorizedException('토큰이 만료되었거나 잘못된 토큰입니다.');
     }
   }
