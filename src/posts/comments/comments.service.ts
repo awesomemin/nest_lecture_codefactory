@@ -23,20 +23,32 @@ export class CommentsService {
         where: {
           post: { id: postId },
         },
+        relations: {
+          author: true,
+        },
       },
-      'posts/comment',
+      `posts/${postId}/comments`,
     );
   }
 
   async getCommentById(postId: number, commentId: number) {
-    return this.commentsRepository.find({
+    const comment = this.commentsRepository.find({
       where: {
         id: commentId,
         post: {
           id: postId,
         },
       },
+      relations: {
+        author: true,
+      },
     });
+
+    if (!comment) {
+      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    }
+
+    return comment;
   }
 
   async createComment(dto: CreateCommentDto, postId: number, authorId: number) {
