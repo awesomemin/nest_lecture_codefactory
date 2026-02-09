@@ -18,40 +18,30 @@ import {
 import { basename, join } from 'path';
 import { POST_IMAGE_PATH, TEMP_FOLDER_PATH } from 'src/common/const/path.const';
 import { promises } from 'fs';
-
-export interface PostModel {
-  id: number;
-  author: string;
-  title: string;
-  content: string;
-  likeCount: number;
-  commentCount: number;
-}
+import { CreatePostImageDto } from './image/dto/create-image.dto';
+import { ImageModel } from 'src/common/entities/image.entity';
+import { DEFAULT_POST_FIND_OPTIONS } from './const/default-post-find-options.const';
 
 @Injectable()
 export class PostsService {
   constructor(
     @InjectRepository(PostsModel)
     private readonly postsRepository: Repository<PostsModel>,
+    @InjectRepository(ImageModel)
+    private readonly imageRepository: Repository<ImageModel>,
     private readonly commonService: CommonService,
     private readonly configService: ConfigService,
   ) {}
 
   async getAllPosts() {
-    return this.postsRepository.find({
-      relations: ['author'],
-    });
+    return this.postsRepository.find({ ...DEFAULT_POST_FIND_OPTIONS });
   }
 
   async paginatePosts(dto: PaginatePostDto) {
     return this.commonService.paginate(
       dto,
       this.postsRepository,
-      {
-        relations: {
-          author: true,
-        },
-      },
+      { ...DEFAULT_POST_FIND_OPTIONS },
       'posts',
     );
     // if (dto.page) {
@@ -140,16 +130,17 @@ export class PostsService {
       await this.createPost(userId, {
         title: `post by random ${i}`,
         content: `content by random ${i}`,
+        images: [],
       });
     }
   }
 
   async getPostById(id: number) {
     const post = await this.postsRepository.findOne({
+      ...DEFAULT_POST_FIND_OPTIONS,
       where: {
         id,
       },
-      relations: ['author'],
     });
 
     if (!post) {
@@ -159,8 +150,8 @@ export class PostsService {
     return post;
   }
 
-  async createPostImage(dto: CreatePostDto) {
-    const tempFilePath = join(TEMP_FOLDER_PATH, dto.image);
+  async createPostImage(dto: CreatePostImageDto) {
+    const tempFilePath = join(TEMP_FOLDER_PATH, dto.path);
 
     try {
       await promises.access(tempFilePath);
@@ -172,9 +163,13 @@ export class PostsService {
 
     const newPath = join(POST_IMAGE_PATH, fileName);
 
+    const result = await this.imageRepository.save({
+      ...dto,
+    });
+
     await promises.rename(tempFilePath, newPath);
 
-    return true;
+    return result;
   }
 
   async createPost(authorId: number, postDto: CreatePostDto) {
@@ -183,6 +178,7 @@ export class PostsService {
         id: authorId,
       },
       ...postDto,
+      images: [],
       likeCount: 0,
       commentCount: 0,
     });
