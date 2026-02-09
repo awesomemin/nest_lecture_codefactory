@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
   Param,
   ParseIntPipe,
   Patch,
@@ -18,10 +19,16 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { PaginatePostDto } from './dto/paginate-post.dto';
 import { UsersModel } from 'src/users/entities/users.entity';
 import { ImageModelType } from 'src/common/entities/image.entity';
+import { DataSource } from 'typeorm';
+import { PostsImagesService } from './images/images.service';
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly postsService: PostsService) {}
+  constructor(
+    private readonly postsService: PostsService,
+    private readonly postsImagesService: PostsImagesService,
+    private readonly dataSource: DataSource,
+  ) {}
 
   @Get()
   getPosts(@Query() query: PaginatePostDto) {
@@ -41,17 +48,35 @@ export class PostsController {
     // @Body('title') title: string,
     // @Body('content') content: string,
   ) {
-    const post = await this.postsService.createPost(userId, body);
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
 
-    for (let i = 0; i < body.images.length; i++) {
-      await this.postsService.createPostImage({
-        post,
-        order: i,
-        path: body.images[i],
-        type: ImageModelType.POST_IMAGE,
-      });
+    try {
+      const post = await this.postsService.createPost(userId, body, qr);
+
+      for (let i = 0; i < body.images.length; i++) {
+        await this.postsImagesService.createPostImage(
+          {
+            post,
+            order: i,
+            path: body.images[i],
+            type: ImageModelType.POST_IMAGE,
+          },
+          qr,
+        );
+      }
+
+      await qr.commitTransaction();
+      await qr.release();
+
+      return this.postsService.getPostById(post.id);
+    } catch {
+      await qr.rollbackTransaction();
+      await qr.release();
+
+      throw new InternalServerErrorException();
     }
-    return this.postsService.getPostById(post.id);
   }
 
   @Patch(':id')

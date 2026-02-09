@@ -1,9 +1,11 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
 import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { FindOptionsWhere, LessThan, MoreThan, Repository } from 'typeorm';
+  FindOptionsWhere,
+  LessThan,
+  MoreThan,
+  QueryRunner,
+  Repository,
+} from 'typeorm';
 import { PostsModel } from './entities/posts.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -15,10 +17,6 @@ import {
   ENV_HOST_KEY,
   ENV_PROTOCOL_KEY,
 } from 'src/common/const/env-keys.const';
-import { basename, join } from 'path';
-import { POST_IMAGE_PATH, TEMP_FOLDER_PATH } from 'src/common/const/path.const';
-import { promises } from 'fs';
-import { CreatePostImageDto } from './image/dto/create-image.dto';
 import { ImageModel } from 'src/common/entities/image.entity';
 import { DEFAULT_POST_FIND_OPTIONS } from './const/default-post-find-options.const';
 
@@ -150,30 +148,16 @@ export class PostsService {
     return post;
   }
 
-  async createPostImage(dto: CreatePostImageDto) {
-    const tempFilePath = join(TEMP_FOLDER_PATH, dto.path);
-
-    try {
-      await promises.access(tempFilePath);
-    } catch {
-      throw new BadRequestException('존재하지 않는 파일입니다.');
-    }
-
-    const fileName = basename(tempFilePath);
-
-    const newPath = join(POST_IMAGE_PATH, fileName);
-
-    const result = await this.imageRepository.save({
-      ...dto,
-    });
-
-    await promises.rename(tempFilePath, newPath);
-
-    return result;
+  getRepository(qr?: QueryRunner) {
+    return qr
+      ? qr.manager.getRepository<PostsModel>(PostsModel)
+      : this.postsRepository;
   }
 
-  async createPost(authorId: number, postDto: CreatePostDto) {
-    const post = this.postsRepository.create({
+  async createPost(authorId: number, postDto: CreatePostDto, qr?: QueryRunner) {
+    const repository = this.getRepository(qr);
+
+    const post = repository.create({
       author: {
         id: authorId,
       },
@@ -183,7 +167,7 @@ export class PostsService {
       commentCount: 0,
     });
 
-    const newPost = await this.postsRepository.save(post);
+    const newPost = await repository.save(post);
 
     return newPost;
   }
